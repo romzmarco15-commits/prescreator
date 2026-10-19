@@ -1,9 +1,9 @@
-PresCreator Dual Canva v14
+# PresCreator v15 — Canva account names and invalid_scope diagnostics
 
-GitHub: Copy these app files over the existing repository and push.
-Cloudflare: Deploy prescreator-worker-dual-canva-v14.txt separately.
-Expected Worker secrets: CANVA_CLIENT_ID, CANVA_CLIENT_SECRET, CANVA_CLIENT_ID2, CANVA_CLIENT_SECRET2.
-Existing KV: SESSIONS.
-Both Canva Developer integrations must register identical OAuth redirect URI: https://prescreator-api.romz-marco15.workers.dev/oauth/redirect
-The UI provides Connection 1 and Connection 2 selection in Settings and Canva AI Studio. Sessions are separate and tab-scoped.
-Do not store Canva secrets in the GitHub repository. Draft integrations are not intended for arbitrary public users.
+Deploy `prescreator-worker-dual-canva-v15.txt` to Cloudflare first. Preserve existing bindings and secrets.
+
+Connection 2 must have the **same enabled OAuth scopes** as the Worker requests: `profile:read`, `design:meta:read`, `design:content:read`, `design:content:write`. Enable them in the second Canva Developer app, and confirm the callback matches. Saving the scopes is required even if the Worker code has been updated.
+
+The app displays the actual Canva **display name** after successful login; Canva's standard profile endpoint does not provide an email address. Until then it displays `Canva account 1` / `Canva account 2`.
+
+Copy the ZIP contents into the GitHub repository, preserving the existing `package-lock.json`. Commit and push.

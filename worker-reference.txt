@@ -1,1 +1,1 @@
-Deploy the separate prescreator-worker-dual-canva-v14.txt in Cloudflare; do not put secrets in this GitHub repository.
+Deploy prescreator-worker-dual-canva-v15.txt separately to Cloudflare.
