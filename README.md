@@ -1,45 +1,31 @@
-# PresCreator — local-first worship presentation studio
+# PresCreator – Native + Canva AI Creation Studio
 
-React + TypeScript + Vite app. GitHub Pages hosts **only the app code**. User-created presentations, lyrics, images, and versions live in the user's browser via IndexedDB. Canva AI remains optional, accessed through the existing Cloudflare Worker.
+A local-first React application published with GitHub Pages.
 
-## First deployment
+## Deployment (two parts, in this order)
 
-1. Unzip this package on your computer. Make sure `package.json`, `index.html`, `src/`, `public/`, and `.github/` are at the **repository root**.
-2. Use GitHub Desktop: **File → Add local repository** (or clone your `prescreator` repository first), copy the files into the cloned repository, and commit and push to `main`.
-3. In the repository: **Settings → Pages → Build and deployment → Source → GitHub Actions**.
-4. Open **Actions** and wait for "Publish PresCreator" to finish.
-5. Visit `https://romzmarco15-commits.github.io/prescreator/`.
+1. Back up your existing Cloudflare Worker. Replace its code with `prescreator-worker-github-integration-v13.mjs` from the separate Worker download. Keep the existing `CANVA_CLIENT_ID`, `CANVA_CLIENT_SECRET` and `SESSIONS` bindings. Deploy the Worker. In Canva Developers, the authorized redirect must be `https://prescreator-api.romz-marco15.workers.dev/oauth/redirect`. Do not put secrets in GitHub.
+2. Copy the **contents** of this app folder to `romzmarco15-commits/prescreator`, commit and push. GitHub Pages → Source: GitHub Actions. The workflow builds and publishes the Vite app automatically.
+3. Visit https://romzmarco15-commits.github.io/prescreator/ → Creation Studio → Canva AI → Connect Canva. OAuth uses a popup, then the Studio can generate and review the PNG slide exports on the right.
 
-If GitHub Pages says this is not a recognized repo or the workflow does not start, check that the file is at `.github/workflows/pages.yml` in `main` (not nested under an extra folder).
+## Local development
 
-## Run locally
-
-Requirements: Node.js 22 (or a compatible current version).
-
-```bash
+```sh
 npm install
 npm run dev
 ```
 
-Open Vite's printed localhost URL.
+Use the URL printed by Vite, not `index.html` as a local file. If a manually created, empty `package-lock.json` exists, remove it before `npm install`, then commit the real generated lock file. The GitHub Actions workflow does not require a lockfile at setup-node.
 
-## Current implementation
+## Design notes
 
-- Exact Native splitting: ignores blank lines, configurable 1–10 lyrics per slide
-- Custom uploaded backgrounds stored on-device, plus bundled background gradients
-- Slide previews, current-slide text editing, browser fullscreen presentation
-- Multiple generation snapshots; restore a previous version
-- Local IndexedDB project library, backup and restore JSON, standalone HTML export
-- Canva login and AI workspace links to the existing Cloudflare Worker
+- Native slides, local projects, custom images and backups use browser storage; no cloud project database.
+- The Cloudflare Worker stores only authentication session state and brief job metadata in its existing KV, and proxies requests to Canva.
+- Canva designs are saved in the **connected user's** Canva account.
+- Canva AI generations may consume account credits and are subject to Canva app approval and the user's feature availability.
+- AI slide images are read-only; editing the actual design still happens in Canva. The version selector keeps PNG URLs in the current tab session, and these URLs may expire.
+- The Canvas integration is still a developer/draft integration; public use with new Canva accounts requires Canva's review and supported API permissions.
 
-## Deliberate limitations
+## Known limitations
 
-- This release does **not** embed Canva AI generation into the React app or establish shared OAuth status across GitHub Pages and Cloudflare. Those require a secure redirect/CORS/session bridge in the backend.
-- Native "Save directly to Canva" is not wired up in this release. Standalone HTML export is available; PPTX/Canva import requires further work.
-- Local browser data can be erased by the browser. Use the full-library Backup action regularly.
-- No cloud project data storage or online account is used.
-- CDN-hosted frontend source is publicly visible. Never put Canva client secrets or tokens into any frontend file, GitHub repository, or Vite environment variable.
-
-## Security
-
-The Cloudflare Worker must authenticate individual Canva users and protect their OAuth tokens server-side. The frontend intentionally does not store access tokens. Only open the Canva login link or workspace in a separate tab until an audited cross-origin integration is implemented.
+This version provides the integrated Canva AI workflow but not a fully tested public multi-user Canva OAuth rollout. The Worker and front-end still require a live integration test against your Canva account. Native saving to Canva is not yet integrated into the React frontend.
