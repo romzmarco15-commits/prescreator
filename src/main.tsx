@@ -14,7 +14,7 @@ function backdropImage(s:Settings):string|null {
  if(s.bgImage) return s.bgImage;
  const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;
  const ctx=canvas.getContext('2d');if(!ctx)return null;
- const css=backgroundCSS(s);
+ //const css=backgroundCSS(s);
  let first=s.bgColor||'#202b48',second=s.bgColor2||'#7449a2',angle=s.gradientAngle??135;
  const known:Record<string,[string,string,number]>={navy:['#10213d','#304a75',135],purple:['#24174b','#69439d',135],beige:['#f5e7cb','#d7bda5',135],forest:['#0a262c','#2d655f',130],black:['#0c111b','#0c111b',0]};
  if(known[s.bg]) [first,second,angle]=known[s.bg];
