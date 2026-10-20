@@ -23,7 +23,7 @@ function songSections(lyrics:string):string[][] {
  if(group.length)groups.push(group);
  return groups;
 }
-function groupSection(lines:string[],preferred:number,maximum:number):string[][] {
+function groupSection(lines:string[],maximum:number):string[][] {
  if(lines.length<=maximum)return [lines];
  const count=Math.ceil(lines.length/maximum);
  const base=Math.floor(lines.length/count),remainder=lines.length%count;
@@ -46,7 +46,7 @@ export const splitLyrics=(lyrics:string,settings:Settings,title:string):Slide[]=
   for(let i=0;i<lines.length;i+=preferred)push(lines.slice(i,i+preferred));
  }else{
   for(const group of songSections(lyrics)){
-   const chunks=mode==='keep-verse'?[group]:groupSection(group,preferred,maximum);
+   const chunks=mode==='keep-verse'?[group]:groupSection(group,maximum);
    chunks.forEach(push);
   }
  }
