@@ -1,7 +1,8 @@
 export type Settings={lines:number;includeTitle:boolean;bg:string;bgImage?:string;bgColor?:string;bgColor2?:string;gradientAngle?:number;font:string;fontSize:number;color:string;align:'left'|'center'|'right';position:'center'|'lower'};
 export type Slide={id:string;text:string;title?:boolean;layout?:'title'|'point'|'scripture'|'reflection'|'closing';notes?:string};
 export type Version={id:string;created:number;label:string;slides:Slide[];settings:Settings};
-export type Project={id:string;title:string;lyrics:string;updated:number;settings:Settings;slides:Slide[];versions:Version[];kind?:'worship'|'teaching';scripture?:string;audience?:string;teachingNotes?:string;teachingSlides?:number};
+export type OutlineCard={id:string;heading:string;detail:string;layout:'point'|'scripture'|'reflection'|'closing';notes:string};
+export type Project={id:string;title:string;lyrics:string;updated:number;settings:Settings;slides:Slide[];versions:Version[];kind?:'worship'|'teaching';scripture?:string;audience?:string;teachingNotes?:string;teachingSlides?:number;outlineCards?:OutlineCard[]};
 const DB='prescreator-local-v1',STORE='projects';
 const open=()=>new Promise<IDBDatabase>((ok,no)=>{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE))r.result.createObjectStore(STORE,{keyPath:'id'})};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
 async function run<T>(mode:IDBTransactionMode,fn:(store:IDBObjectStore,resolve:(value:T)=>void,reject:(reason?:unknown)=>void)=>void){const db=await open();return new Promise<T>((resolve,reject)=>{const tx=db.transaction(STORE,mode);fn(tx.objectStore(STORE),resolve,reject);tx.oncomplete=()=>db.close();tx.onerror=()=>reject(tx.error)})}
@@ -12,20 +13,21 @@ export const defaults:Settings={lines:2,includeTitle:true,bg:'navy',bgColor:'#20
 export const newProject=():Project=>({id:crypto.randomUUID(),title:'Untitled worship song',lyrics:'',updated:Date.now(),settings:{...defaults},slides:[],versions:[]});
 export const splitLyrics=(lyrics:string,settings:Settings,title:string):Slide[]=>{const lines=lyrics.replace(/\r/g,'').split('\n').map(l=>l.trim()).filter(Boolean);const slides:Slide[]=settings.includeTitle?[{id:crypto.randomUUID(),text:title,title:true}]:[];for(let i=0;i<lines.length;i+=settings.lines)slides.push({id:crypto.randomUUID(),text:lines.slice(i,i+settings.lines).join('\n')});return slides};
 
-// Native sermon slides are deterministic; blank outline lines are ignored.
-// Each outline row supports "Heading | short explanation"; no Scripture is invented.
-export function teachingSlides(p:Project):Slide[]{
- const lines=p.lyrics.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
- const slides:Slide[]=[];
- if(p.settings.includeTitle)slides.push({id:crypto.randomUUID(),text:p.title+(p.scripture?'\n'+p.scripture:''),title:true,layout:'title',notes:p.teachingNotes||''});
- lines.forEach((line,i)=>{
-  const parts=line.split('|').map(s=>s.trim());
-  const heading=parts[0]||`Point ${i+1}`,detail=parts.slice(1).join(' | ');
-  const isVerse=/^(verse|scripture|bible passage|reading)\s*:/i.test(heading);
-  const isQuestion=/^(reflection|discussion|application|question)\s*:/i.test(heading);
-  const isClosing=/^(closing|prayer|conclusion)\s*:/i.test(heading);
-  slides.push({id:crypto.randomUUID(),text:heading+(detail?'\n'+detail:''),layout:isVerse?'scripture':isQuestion?'reflection':isClosing?'closing':'point',notes:''});
+// Older projects used one "heading | detail" per line. Convert them on first edit.
+export function getOutlineCards(p:Project):OutlineCard[]{
+ if(p.outlineCards)return p.outlineCards;
+ return p.lyrics.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).map(line=>{
+  const parts=line.split('|').map(s=>s.trim()),heading=parts[0]||'Teaching point';
+  const layout=/^(verse|scripture|bible passage|reading)\s*:/i.test(heading)?'scripture':/^(reflection|discussion|application|question)\s*:/i.test(heading)?'reflection':/^(closing|prayer|conclusion)\s*:/i.test(heading)?'closing':'point';
+  return {id:crypto.randomUUID(),heading,detail:parts.slice(1).join(' | '),layout:layout as OutlineCard['layout'],notes:''};
  });
- if(!lines.length)slides.push({id:crypto.randomUUID(),text:'Introduction\nAdd teaching points in the outline editor',layout:'point'});
+}
+export function serializeOutline(cards:OutlineCard[]):string {return cards.map(c=>`${c.heading.trim()}${c.detail.trim()?' | '+c.detail.trim():''}`).join('\n');}
+// One card becomes one slide, with separate local speaker notes.
+export function teachingSlides(p:Project):Slide[]{
+ const cards=getOutlineCards(p).filter(c=>c.heading.trim()||c.detail.trim()),slides:Slide[]=[];
+ if(p.settings.includeTitle)slides.push({id:crypto.randomUUID(),text:p.title+(p.scripture?'\n'+p.scripture:''),title:true,layout:'title',notes:p.teachingNotes||''});
+ for(const card of cards){slides.push({id:crypto.randomUUID(),text:card.heading.trim()+(card.detail.trim()?'\n'+card.detail.trim():''),layout:card.layout,notes:card.notes});}
+ if(!cards.length)slides.push({id:crypto.randomUUID(),text:'Introduction\nAdd your first teaching point',layout:'point'});
  return slides;
 }
