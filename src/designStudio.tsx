@@ -5,7 +5,7 @@ import './designStudio.css';
 type Output='title'|'section'|'announcement'|'poster'|'invite';
 type Orientation='landscape'|'portrait'|'square';
 type Theme={id:string;name:string;type:'gradient'|'solid'|'image';colors:[string,string];accent:string;foreground:string;font:string;layout:'center'|'left'|'frame';background?:string;source?:'native'|'canva'|'ai';canvaDesignId?:string;styleNotes?:string};
-type Design={id:string;name:string;output:Output;orientation:Orientation;theme:Theme;title:string;subtitle:string;body:string;date:string;time:string;venue:string;address:string;footer:string;updated:number};
+type Design={id:string;name:string;output:Output;orientation:Orientation;theme:Theme;title:string;subtitle:string;body:string;date:string;time:string;venue:string;address:string;footer:string;blank?:boolean;updated:number};
 const defaultThemes:Theme[]=[
  {id:'cream',name:'Warm Minimalist',type:'gradient',colors:['#f9f4e9','#e3cfb3'],accent:'#876448',foreground:'#342d29',font:'Georgia, serif',layout:'center'},
  {id:'navy',name:'Elegant Navy',type:'gradient',colors:['#101b34','#34466d'],accent:'#d7bb84',foreground:'#ffffff',font:'Georgia, serif',layout:'center'},
@@ -14,7 +14,7 @@ const defaultThemes:Theme[]=[
  {id:'rose',name:'Soft Floral',type:'gradient',colors:['#f8e9e3','#ddb2b0'],accent:'#995962',foreground:'#3b2731',font:'Georgia, serif',layout:'frame'},
  {id:'youth',name:'Youth Energy',type:'gradient',colors:['#161335','#7541d8'],accent:'#adffbd',foreground:'#ffffff',font:'Arial Black, sans-serif',layout:'left'}
 ];
-const newDesign=(theme=defaultThemes[0],output:Output='title'):Design=>({id:crypto.randomUUID(),name:'New design',output,orientation:output==='poster'||output==='invite'?'portrait':'landscape',theme:{...theme},title:output==='section'?'Praise and Worship':output==='announcement'?'Announcements':output==='poster'?'Sunday Service':output==='invite'?'You Are Invited':'Sunday Worship',subtitle:output==='title'?'Hope Filipino Axis':'',body:'',date:'',time:'',venue:'',address:'',footer:'',updated:Date.now()});
+const newDesign=(theme=defaultThemes[0],output:Output='title'):Design=>({id:crypto.randomUUID(),name:'New design',output,orientation:output==='poster'||output==='invite'?'portrait':'landscape',theme:{...theme},title:output==='section'?'Praise and Worship':output==='announcement'?'Announcements':output==='poster'?'Sunday Service':output==='invite'?'You Are Invited':'Sunday Worship',subtitle:output==='title'?'Hope Filipino Axis':'',body:'',date:'',time:'',venue:'',address:'',footer:'',blank:false,updated:Date.now()});
 const dateText=(s:string)=>/^\d{4}-\d{2}-\d{2}$/.test(s)?new Date(s+'T12:00:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric',year:'numeric'}):s;
 const timeText=(s:string)=>/^([01]\d|2[0-3]):[0-5]\d$/.test(s)?new Date('2000-01-01T'+s+':00').toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}):s;
 const THEME_DB='prescreator-themes-v1';
@@ -39,14 +39,14 @@ function SlideArtwork({design,mini=false}:{design:Design;mini?:boolean}){
  return <div className={'ds-art '+orient+' ds-'+t.layout+(mini?' ds-mini':'')} style={{background:bg,backgroundRepeat:'no-repeat',backgroundSize:'cover',backgroundPosition:'center',color:t.type==='image'?'white':t.foreground,fontFamily:t.font}}>
   <div className="ds-decoration" style={{borderColor:t.accent}}/>
   <div className="ds-inner">
-    {design.output==='invite'&&<div className="ds-kicker" style={{color:t.accent}}>YOU ARE INVITED</div>}
-    {design.output==='poster'&&<div className="ds-kicker" style={{color:t.accent}}>JOIN US</div>}
-    {design.output==='announcement'&&<div className="ds-kicker" style={{color:t.accent}}>CHURCH UPDATES</div>}
-    <div className="ds-title">{design.title||'Your title'}</div>
-    {design.subtitle&&<div className="ds-subtitle">{design.subtitle}</div>}
-    {design.body&&<div className="ds-body">{design.body}</div>}
-    {(design.date||design.time||design.venue||design.address)&&<div className="ds-details">{[dateText(design.date),timeText(design.time),design.venue,design.address].filter(Boolean).map((x,i)=><div key={i}>{x}</div>)}</div>}
-    {design.footer&&<div className="ds-footer">{design.footer}</div>}
+    {!design.blank&&design.output==='invite'&&<div className="ds-kicker" style={{color:t.accent}}>YOU ARE INVITED</div>}
+    {!design.blank&&design.output==='poster'&&<div className="ds-kicker" style={{color:t.accent}}>JOIN US</div>}
+    {!design.blank&&design.output==='announcement'&&<div className="ds-kicker" style={{color:t.accent}}>CHURCH UPDATES</div>}
+    {!design.blank&&<div className="ds-title">{design.title||'Your title'}</div>}
+    {!design.blank&&design.subtitle&&<div className="ds-subtitle">{design.subtitle}</div>}
+    {!design.blank&&design.body&&<div className="ds-body">{design.body}</div>}
+    {!design.blank&&(design.date||design.time||design.venue||design.address)&&<div className="ds-details">{[dateText(design.date),timeText(design.time),design.venue,design.address].filter(Boolean).map((x,i)=><div key={i}>{x}</div>)}</div>}
+    {!design.blank&&design.footer&&<div className="ds-footer">{design.footer}</div>}
   </div>
  </div>
 }
@@ -54,6 +54,7 @@ function wrapText(ctx:CanvasRenderingContext2D,text:string,maxWidth:number){cons
 async function renderPng(d:Design){const [w,h]=dims(d),c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');if(!x)throw Error('Canvas not supported');const t=d.theme;
  if(t.type==='image'&&t.background){const img=new Image();img.src=t.background;await new Promise<void>((r,j)=>{img.onload=()=>r();img.onerror=()=>j(Error('Background image could not load'))});const ratio=Math.max(w/img.naturalWidth,h/img.naturalHeight);const iw=img.naturalWidth*ratio,ih=img.naturalHeight*ratio;x.drawImage(img,(w-iw)/2,(h-ih)/2,iw,ih);x.fillStyle='rgba(0,0,0,.28)';x.fillRect(0,0,w,h)}else if(t.type==='solid'){x.fillStyle=t.colors[0];x.fillRect(0,0,w,h)}else{const g=x.createLinearGradient(0,0,w,h);g.addColorStop(0,t.colors[0]);g.addColorStop(1,t.colors[1]);x.fillStyle=g;x.fillRect(0,0,w,h)}
  if(t.layout==='frame'){x.strokeStyle=t.accent;x.lineWidth=3;x.strokeRect(w*.055,h*.07,w*.89,h*.86)}
+ if(d.blank)return await new Promise<Blob>((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(Error('PNG export failed')),'image/png'));
  const textColor=t.type==='image'?'#ffffff':t.foreground;x.fillStyle=textColor;x.textAlign=t.layout==='left'?'left':'center';x.textBaseline='middle';const cx=t.layout==='left'?w*.12:w/2,maxWidth=w*(t.layout==='left'?.76:.78);
  const parts:{text:string;size:number;color:string;weight:string;gap:number}[]=[];
  if(d.output==='invite'||d.output==='poster'||d.output==='announcement')parts.push({text:d.output==='invite'?'YOU ARE INVITED':d.output==='poster'?'JOIN US':'CHURCH UPDATES',size:fitFont(32,d),color:t.accent,weight:'bold',gap:34});
@@ -70,10 +71,14 @@ async function renderPng(d:Design){const [w,h]=dims(d),c=document.createElement(
 const saveBlob=(blob:Blob,name:string)=>{const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000)};
 const WORKER='https://prescreator-api.romz-marco15.workers.dev';
 type CanvaVersion={id:string;preview:string;editUrl:string;title:string;created:number};
+type NativeVersion={id:string;design:Design;created:number};
 type CanvaProps={canvaSession:string|null;canvaAccount:'1'|'2';canvaNames:Record<string,string>;canvaSessions:Record<string,string>;onAccountChange:(id:'1'|'2')=>void;onConnect:(needsAssets?:boolean)=>void};
 export default function DesignStudio({canvaSession,canvaAccount,canvaNames,canvaSessions,onAccountChange,onConnect}:CanvaProps){
  const [design,setDesign]=useState<Design>(()=>newDesign()),[tab,setTab]=useState<'themes'|Output>('themes'),[saved,setSaved]=useState<Design[]>([]),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[ideas,setIdeas]=useState<Theme[]>(defaultThemes),[selected,setSelected]=useState('cream'),[themePrompt,setThemePrompt]=useState('');const fileRef=useRef<HTMLInputElement>(null);
- const [source,setSource]=useState<'native'|'ai'>('native');
+ const [source,setSource]=useState<'native'|'ai'>('native'); // Theme Studio only
+ const [nativeVersions,setNativeVersions]=useState<NativeVersion[]>([]);
+ const [previewKey,setPreviewKey]=useState('live');
+ const [aiDetailsOpen,setAiDetailsOpen]=useState(false);
  const [aiInstructions,setAiInstructions]=useState('Minimalist and professional church design. Strong typographic hierarchy.');
  const [aiVersions,setAiVersions]=useState<CanvaVersion[]>([]),[aiIndex,setAiIndex]=useState(0);
  const [savedCanvaUrl,setSavedCanvaUrl]=useState('');
@@ -86,6 +91,11 @@ export default function DesignStudio({canvaSession,canvaAccount,canvaNames,canva
  const [themeName,setThemeName]=useState('');
 
  const currentAI=aiVersions[aiIndex];
+ const selectedAI=previewKey.startsWith('ai:')?aiVersions.find(v=>v.id===previewKey.slice(3)):null;
+ const selectedNative=previewKey.startsWith('native:')?nativeVersions.find(v=>v.id===previewKey.slice(7)):null;
+ const previewDesign=selectedNative?.design||design;
+ const showAiPreview=!!selectedAI;
+ const isThemeStudio=tab==='themes';
  const canvaApi=async(path:string,method='GET',payload?:unknown)=>{
   if(!canvaSession)throw Error('Connect a Canva account first');
   const resp=await fetch(WORKER+'/app/'+path,{method,headers:{Authorization:'Bearer '+canvaSession,...(method==='POST'?{'Content-Type':'application/json'}:{})},body:method==='POST'?JSON.stringify(payload??{}):undefined});
@@ -104,7 +114,7 @@ export default function DesignStudio({canvaSession,canvaAccount,canvaNames,canva
    const t:Theme={id:crypto.randomUUID(),name:item.title||'Canva theme',type:'image',colors:['#1d2538','#394767'],accent:'#e6d3ad',foreground:'#ffffff',font:'Arial, sans-serif',layout:'center',background,source:'canva',canvaDesignId:item.id,styleNotes:`Visual inspiration: ${item.title||'Canva design'}. Preserve a consistent look, elegant hierarchy and legible text.`};
    await putTheme(t);await refreshThemeList();choose(t);setThemeSource('local');setSource('native');setMessage('Canva design preview imported as a local background. PresCreator text remains editable; the original Canva elements are not.');
   }catch(e){setMessage('Could not import Canva theme: '+String(e))}finally{setBusy(false)}};
- const saveAITheme=async()=>{if(!currentAI){setMessage('Generate an AI concept first.');return;}await importCanvaTheme({id:currentAI.id,title:currentAI.title+' · AI theme',thumbnail:currentAI.preview,editUrl:currentAI.editUrl});};
+ const saveAITheme=async(v?:CanvaVersion)=>{const selected=v||currentAI;if(!selected){setMessage('Generate an AI concept first.');return;}await importCanvaTheme({id:selected.id,title:selected.title+' · AI theme',thumbnail:selected.preview,editUrl:selected.editUrl});};
  const generateCanva=async()=>{
   if(!canvaSession){onConnect();setMessage('Connect Canva, then generate your design.');return;}
   setBusy(true);setMessage('Creating a Canva AI 16:9 presentation design...');
@@ -115,7 +125,7 @@ export default function DesignStudio({canvaSession,canvaAccount,canvaNames,canva
    const done=await poll('generation-status?job='+encodeURIComponent(started.jobId),140);
    if(!done.designId)throw Error('Design completed without a design ID. Check Canva Projects.');
    const version:CanvaVersion={id:done.designId,preview:'',editUrl:done.editUrl||'https://www.canva.com/projects',title:design.title||'Untitled',created:Date.now()};
-   setAiVersions(v=>[version,...v].slice(0,12));setAiIndex(0);
+   setAiVersions(v=>[version,...v].slice(0,12));setAiIndex(0);setPreviewKey('ai:'+version.id);
    setMessage('Generated in Canva. Loading slide image...');
    try{
     const ex=await canvaApi('export','POST',{designId:done.designId});
@@ -148,24 +158,33 @@ export default function DesignStudio({canvaSession,canvaAccount,canvaNames,canva
  const patch=(p:Partial<Design>)=>setDesign(d=>({...d,...p,updated:Date.now()}));
  const patchTheme=(p:Partial<Theme>)=>setDesign(d=>({...d,theme:{...d.theme,...p},updated:Date.now()}));
  const choose=(theme:Theme)=>{setSelected(theme.id);patch({theme:{...theme}});setMessage('Theme selected. You can now create any item with this style.');};
- const selectTab=(out:Output|'themes')=>{setTab(out);if(out!=='themes')patch({output:out,orientation:out==='poster'||out==='invite'?'portrait':'landscape'});};
+ const selectTab=(out:Output|'themes')=>{setTab(out);if(out!=='themes'){patch({output:out,blank:false,orientation:out==='poster'||out==='invite'?'portrait':'landscape'});setPreviewKey('live');}};
  const createOptions=()=>{const q=themePrompt.toLowerCase();const base=q.match(/flower|floral|rose|pink/)?defaultThemes[4]:q.match(/green|nature|forest|earth/)?defaultThemes[2]:q.match(/youth|neon|bold/)?defaultThemes[5]:q.match(/warm|beige|cream|minimal/)?defaultThemes[0]:q.match(/purple|modern|worship/)?defaultThemes[3]:defaultThemes[1];const rotation=defaultThemes.map((t,i)=>({...t,id:'variant-'+Date.now()+'-'+i,colors:i===0?base.colors:i%2===0?[t.colors[1],t.colors[0]] as [string,string]:t.colors,layout:(['center','left','frame'] as const)[i%3],name:i===0?base.name+' · from prompt':t.name}));setIdeas(rotation);setMessage('Six native design variations generated from your theme direction. Select one to reuse.');};
+ const generateNative=()=>{
+  const snapshot:Design=structuredClone({...design,updated:Date.now()});
+  const v:NativeVersion={id:crypto.randomUUID(),design:snapshot,created:Date.now()};
+  setNativeVersions(prev=>[v,...prev].slice(0,20));
+  setPreviewKey('native:'+v.id);
+  setMessage('Native version generated. Your fields remain editable; select Live edit to continue changing them.');
+ };
+ const generateAIFromEditor=()=>{void generateCanva();};
  const upload=async(file?:File)=>{if(!file)return;if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>2*1024*1024){setMessage('Use a PNG, JPEG, or WebP image smaller than 2 MB.');return;}const reader=new FileReader();reader.onload=()=>patchTheme({type:'image',background:String(reader.result)});reader.readAsDataURL(file)};
  const doSave=async()=>{setBusy(true);try{await saveDesign(design);setSaved(await getDesigns());setMessage('Design saved locally on this device.')}catch(e){setMessage('Save failed: '+String(e))}finally{setBusy(false)}};
  const exportImage=async()=>{setBusy(true);try{const image=await renderPng(design);saveBlob(image,(design.title||'prescreator-design').replace(/[^\w-]+/g,'-')+'.png');setMessage('PNG downloaded.')}catch(e){setMessage(String(e))}finally{setBusy(false)}};
  const useSaved=(d:Design)=>{setDesign(structuredClone(d));setTab(d.output);setSelected(d.theme.id);setMessage('Saved design loaded.');};
  const copyDesign=()=>{setDesign(d=>({...structuredClone(d),id:crypto.randomUUID(),name:d.name+' (copy)',updated:Date.now()}));setMessage('New copy created.');};
- const label=(type:Output)=>({title:'Title Slide',section:'Section Divider',announcement:'Announcement',poster:'Poster',invite:'E-Invite'}[type]);
  return <div className="ds-workspace">
-  <div className="ds-tabs"><button className={tab==='themes'?'active':''} onClick={()=>setTab('themes')}>Theme Picker</button>{(['title','section','announcement','poster','invite'] as Output[]).map(t=><button key={t} className={tab===t?'active':''} onClick={()=>selectTab(t)}>{label(t)}</button>)}</div>
+  <div className="ds-tabs"><button className={tab==='themes'?'active':''} onClick={()=>setTab('themes')}>Theme Studio</button><button className={tab==='title'||tab==='section'?'active':''} onClick={()=>selectTab('title')}>Slide Maker</button><button className={tab==='invite'?'active':''} onClick={()=>selectTab('invite')}>E-Invite Maker</button><button className={tab==='announcement'?'active':''} onClick={()=>selectTab('announcement')}>Announcement Maker</button></div>
   {message&&<div className="ds-notice" role="status"><Info size={15}/>{message}<button onClick={()=>setMessage('')}>×</button></div>}
-  <div className="ds-mode"><div className="ds-modeswitch"><button className={source==='native'?'selected':''} onClick={()=>setSource('native')}>Native editor</button><button className={source==='ai'?'selected':''} onClick={()=>setSource('ai')}>Canva AI concepts</button></div><span>Use the same theme and details in Native, then switch to Canva AI to request a redesign. Original Native design is preserved.</span></div><div className="ds-layout"><section className="ds-panel">
+  {isThemeStudio&&<div className="ds-mode"><div className="ds-modeswitch"><button className={source==='native'?'selected':''} onClick={()=>setSource('native')}>Native concepts</button><button className={source==='ai'?'selected':''} onClick={()=>setSource('ai')}>Canva AI concepts</button></div><span>Theme Studio creates visual inspiration. The makers below always offer Native and Canva AI generation together.</span></div>}<div className="ds-layout"><section className="ds-panel">
    {tab==='themes'?<><h2>Choose a visual identity</h2><p>Pick a style once, then reuse it across posters, invites, and presentation slides.</p><label>Design direction</label><input aria-label="Design direction" value={themePrompt} placeholder="e.g. warm floral worship" onChange={e=>setThemePrompt(e.target.value)}/><small className="ds-help">Native concept variations use color and style keywords from your prompt. For AI concepts, switch to Canva AI above. Canva generates one 16:9 presentation design per request.</small><button className="ds-btn secondary" onClick={createOptions}><RefreshCw size={15}/> Refresh native concepts</button><div className="ds-themegrid">{ideas.map(t=><button key={t.id} className={'ds-theme '+(selected===t.id?'selected':'')} onClick={()=>choose(t)}><span style={{background:`linear-gradient(135deg,${t.colors[0]},${t.colors[1]})`,color:t.foreground,fontFamily:t.font}}>{t.name}</span><b>{t.name}</b></button>)}</div>
    <h3>Theme Library</h3><div className="ds-mode ds-smalltabs"><div className="ds-modeswitch"><button className={themeSource==='local'?'selected':''} onClick={()=>setThemeSource('local')}>Local Themes</button><button className={themeSource==='canva'?'selected':''} onClick={()=>setThemeSource('canva')}>My Canva Designs</button></div></div>
    {themeSource==='local'?<><div className="ds-fieldgrid"><div><label>Theme name</label><input value={themeName} onChange={e=>setThemeName(e.target.value)} placeholder="e.g. Sunday Beige"/></div><button className="ds-btn secondary ds-save-theme" onClick={saveCurrentTheme}><Save size={14}/> Save current theme</button></div><div className="ds-themegrid">{themes.map(t=><div key={t.id} className="ds-theme-entry"><button className={'ds-theme '+(selected===t.id?'selected':'')} onClick={()=>choose(t)}><span style={{background:t.type==='image'&&t.background?`url(${t.background}) center / cover no-repeat`:t.type==='solid'?t.colors[0]:`linear-gradient(135deg,${t.colors.join(',')})`,color:t.foreground}}>{t.type==='image'?'':'Aa'}</span><b>{t.name}</b></button><button className="ds-theme-delete" title="Delete local theme" onClick={async()=>{await removeTheme(t.id);await refreshThemeList();}}><Trash2 size={13}/></button></div>)}</div>{!themes.length&&<small>No saved themes yet. Save your current theme or import one from Canva.</small>}</>:
    <><div className="ds-actions"><button className="ds-btn secondary" disabled={loadingLibrary} onClick={()=>fetchCanvaLibrary(false)}><RefreshCw size={14}/>{loadingLibrary?'Loading...':'Load Canva designs'}</button></div><label>Search loaded designs</label><input value={canvaFilter} onChange={e=>setCanvaFilter(e.target.value)} placeholder="Search by design title"/><div className="ds-themegrid">{canvaLibrary.filter(item=>item.title.toLowerCase().includes(canvaFilter.toLowerCase())).map(item=><div className="ds-canva-theme" key={item.id}>{item.thumbnail?<img src={item.thumbnail} alt="Canva design preview" loading="lazy"/>:<div className="ds-no-thumb">No thumbnail</div>}<strong>{item.title}</strong><div className="ds-actions"><button className="ds-btn secondary" disabled={busy} onClick={()=>importCanvaTheme(item)}>Use as theme</button>{item.editUrl&&<a className="ds-btn secondary" href={item.editUrl} target="_blank" rel="noreferrer">Open</a>}</div></div>)}</div>{canvaContinuation&&<button className="ds-btn secondary" disabled={loadingLibrary} onClick={()=>fetchCanvaLibrary(true)}>Load more</button>}<small className="ds-help">A Canva design is imported as background artwork. Native text and layout are editable, but the Canva design's original objects are not.</small></>}
-   <div className="ds-actions">{(['title','section','announcement','poster','invite'] as Output[]).map(t=><button className="ds-btn secondary" key={t} onClick={()=>selectTab(t)}><Plus size={14}/> {label(t)}</button>)}</div></>:
-   <><h2>{label(tab)}</h2><p>{tab==='title'?'One title slide before a sermon or worship song.':tab==='section'?'A simple divider for Praise & Worship, Announcements, or Prayer.':tab==='announcement'?'A clear slide for important church notices.':tab==='poster'?'An editable portrait, square, or landscape event poster.':'An invitation with event date, time, and location.'}</p>
+   <div className="ds-actions">{(['title','invite','announcement'] as Output[]).map(t=><button className="ds-btn secondary" key={t} onClick={()=>selectTab(t)}><Plus size={14}/> {t==='title'?'Slide Maker':t==='invite'?'E-Invite Maker':'Announcement Maker'}</button>)}</div></>:
+   <><div className="ds-current-theme"><div className="ds-theme-swatch" style={{background:design.theme.type==='image'&&design.theme.background?`url("${design.theme.background}") center / cover no-repeat`:design.theme.type==='solid'?design.theme.colors[0]:`linear-gradient(135deg,${design.theme.colors[0]},${design.theme.colors[1]})`}}/><div><small>ACTIVE THEME</small><strong>{design.theme.name}</strong><small>{design.theme.styleNotes||'Reusable native styling and visual guidance for Canva AI'}</small></div><button className="ds-btn secondary" onClick={()=>setTab('themes')}>Change</button></div><h2>{tab==='title'||tab==='section'?'Slide Maker':tab==='invite'?'E-Invite Maker':'Announcement Maker'}</h2><p>{tab==='title'||tab==='section'?'Create blank, title or section slides using one theme.':tab==='announcement'?'A clear slide for church announcements.':'An invitation with event date, time, and location.'}</p>
+    {(tab==='title'||tab==='section')&&<><label>Slide type</label><select value={design.blank?'blank':tab==='section'?'section':'title'} onChange={e=>{const val=e.target.value;const output=val==='section'?'section':'title';setTab(output);patch({output,blank:val==='blank'});setPreviewKey('live');}}><option value="blank">Blank slide</option><option value="title">Title slide</option><option value="section">Section divider</option></select></>}
+    
     <label>Design name</label><input value={design.name} onChange={e=>patch({name:e.target.value})}/>
     <label>Main title</label><input value={design.title} onChange={e=>patch({title:e.target.value})}/>
     <div className="ds-quick">{tab==='section'?['Praise and Worship','Teaching','Announcements','Prayer','Welcome','Offering'].map(s=><button key={s} onClick={()=>patch({title:s})}>{s}</button>):tab==='announcement'?['Announcements','Life Groups','Sunday Service','Upcoming Events'].map(s=><button key={s} onClick={()=>patch({title:s})}>{s}</button>):null}</div>
@@ -181,14 +200,31 @@ export default function DesignStudio({canvaSession,canvaAccount,canvaNames,canva
     <label>Layout</label><select value={design.theme.layout} onChange={e=>patchTheme({layout:e.target.value as Theme['layout']})}><option value="center">Centered</option><option value="left">Left aligned</option><option value="frame">Elegant frame</option></select>
     <div className="ds-actions"><button className="ds-btn secondary" onClick={saveCurrentTheme}><Save size={14}/> Save theme</button><button className="ds-btn primary" onClick={doSave} disabled={busy}><Save size={15}/> Save locally</button><button className="ds-btn secondary" onClick={exportImage} disabled={busy}><Download size={15}/> Download PNG</button><button className="ds-btn secondary" onClick={copyDesign}><Copy size={15}/> Duplicate</button></div>
    </>}
-   <div className="ds-canva-panel"><h3><Cloud size={17}/> Canva connection</h3><select value={canvaAccount} onChange={e=>onAccountChange(e.target.value as '1'|'2')}>{(['1','2'] as const).map(id=><option key={id} value={id}>{canvaNames[id]||'Canva account '+id}{canvaSessions[id]?' (connected)':''}</option>)}</select>
-   {!canvaSession&&<button className="ds-btn secondary" onClick={()=>onConnect()}>Connect Canva</button>}
-   {source==='ai'?<><label>Additional AI instructions</label><textarea rows={3} value={aiInstructions} onChange={e=>setAiInstructions(e.target.value)} placeholder="Minimalist floral worship, elegant font pairing, soft shadows..."/><small className="ds-help">Canva AI supports 16:9 presentation concepts here. Portrait and square outputs are generated exactly in Native mode, not via this AI endpoint. Each regeneration may use AI credits.</small><button className="ds-btn primary" disabled={busy} onClick={generateCanva}><Sparkles size={15}/>{busy?'Working...':aiVersions.length?'Generate another Canva variation':'Generate with Canva AI'}</button></>:
-   <div className="ds-actions"><button className="ds-btn primary" onClick={()=>setSource('ai')}><Sparkles size={14}/> Redesign with Canva AI</button><button className="ds-btn secondary" onClick={()=>onConnect(true)} disabled={busy}>Authorize image upload</button><button className="ds-btn secondary" disabled={busy} onClick={saveToCanva}><Cloud size={15}/> Save Native design to Canva</button>{savedCanvaUrl&&<a className="ds-btn secondary" href={savedCanvaUrl} target="_blank" rel="noreferrer"><ExternalLink size={15}/> Open in Canva</a>}</div>}
+   <div className="ds-canva-panel">
+     <h3><Cloud size={17}/> Canva connection</h3>
+     <select value={canvaAccount} onChange={e=>onAccountChange(e.target.value as '1'|'2')}>{(['1','2'] as const).map(id=><option key={id} value={id}>{canvaNames[id]||'Canva account '+id}{canvaSessions[id]?' (connected)':''}</option>)}</select>
+     {!canvaSession&&<button className="ds-btn secondary" onClick={()=>onConnect()}>Connect Canva</button>}
+     {isThemeStudio ? <>
+       {source==='ai'&&<><label>Additional AI theme instructions</label><textarea rows={3} value={aiInstructions} onChange={e=>setAiInstructions(e.target.value)} placeholder="A consistent floral theme with coordinated colors and background artwork"/><button className="ds-btn primary" disabled={busy} onClick={generateCanva}><Sparkles size={15}/>{busy?'Generating...':'Generate theme concept with Canva AI'}</button></>}
+       <small className="ds-help">Choose a theme, save it, then use it in the three makers. Canva artwork may contain baked-in text; it cannot be separated automatically.</small>
+     </> : <>
+       <details open={aiDetailsOpen} onToggle={e=>setAiDetailsOpen(e.currentTarget.open)} className="ds-ai-details"><summary><Sparkles size={15}/> Additional AI instructions (optional)</summary><textarea rows={3} value={aiInstructions} onChange={e=>setAiInstructions(e.target.value)} placeholder="Make it elegant and minimalist; use subtle botanical accents. Keep all event details accurate."/><small className="ds-help">The selected theme, fonts, colors and all current details are included automatically.</small></details>
+       <div className="ds-generator-actions"><button className="ds-btn secondary" disabled={busy} onClick={generateNative}><Plus size={15}/> Generate Native</button><button className="ds-btn primary" disabled={busy} onClick={generateAIFromEditor}><Sparkles size={15}/>{busy?'Generating...':aiVersions.length?'Redesign with Canva AI':'Generate with Canva AI'}</button></div>
+       <small className="ds-help">Native versions remain editable. Canva AI designs are separate versions and may deviate from the supplied theme or exact text.</small>
+       <div className="ds-actions"><button className="ds-btn secondary" onClick={()=>onConnect(true)} disabled={busy}>Authorize image upload</button><button className="ds-btn secondary" disabled={busy} onClick={saveToCanva}><Cloud size={15}/> Save Native to Canva</button>{savedCanvaUrl&&<a className="ds-btn secondary" href={savedCanvaUrl} target="_blank" rel="noreferrer"><ExternalLink size={15}/> Open saved design</a>}</div>
+     </>}
    </div>
-  </section><section className="ds-preview"><div className="ds-previewhead"><div><h2>{source==='ai'?'Canva AI design preview':'Live design preview'}</h2><small>{source==='ai'?'Canva versions appear here after generation':'Edits update without regenerating'}</small></div>{source==='native'&&<button className="ds-btn primary" disabled={busy} onClick={exportImage}><Download size={15}/> Export PNG</button>}</div><div className="ds-stage">{source==='native'?<SlideArtwork design={design}/>:currentAI?.preview?<img className="ds-ai-preview" src={currentAI.preview} alt="Canva AI-generated concept"/>:currentAI?<div className="ds-ai-empty">Canva created the design, but no image preview was returned.<a href={currentAI.editUrl} target="_blank" rel="noreferrer">Open in Canva</a></div>:<div className="ds-ai-empty"><Sparkles size={30}/>Generate a Canva AI concept to preview it here.</div>}</div>
-   {source==='ai'&&<div className="ds-ai-history"><h3>AI design versions ({aiVersions.length})</h3><div className="ds-ai-cards">{aiVersions.map((v,i)=><button key={v.id} className={aiIndex===i?'selected':''} onClick={()=>setAiIndex(i)}>{v.preview?<img src={v.preview} alt="AI variation thumbnail"/>:<span>Design {i+1}</span>}<small>{new Date(v.created).toLocaleTimeString()}</small></button>)}</div>{currentAI&&<button className="ds-btn secondary" disabled={busy} onClick={saveAITheme}><Save size={14}/> Save AI design as local theme</button>}{currentAI&&<a className="ds-btn primary" href={currentAI.editUrl} target="_blank" rel="noreferrer"><ExternalLink size={15}/> Edit AI design in Canva</a>}</div>}<p className="ds-muted">{source==='native'?'Native preview uses the selected format. Landscape 1920×1080, portrait 1080×1350, square 1080×1080. Canva Save uploads a flattened artwork layer.':'Canva AI returns an editable Canva presentation (16:9); actual page count, wording and style may vary. Open in Canva to edit it.'}</p><h3>Saved designs</h3>{saved.length?<div className="ds-saved">{saved.map(d=><div key={d.id} className="ds-saveditem"><button onClick={()=>useSaved(d)}><SlideArtwork mini design={d}/><span>{d.name}<small>{d.output} · {new Date(d.updated).toLocaleDateString()}</small></span></button><button aria-label="Delete saved design" title="Delete" onClick={async()=>{await deleteDesign(d.id);setSaved(await getDesigns())}}><Trash2 size={16}/></button></div>)}</div>:<p className="ds-muted">No saved designs yet. Use Save locally to keep a theme and slide on this device.</p>}
-   <div className="ds-footerinfo"><Check size={14}/> No Canva account or Cloudflare storage is needed for native designs.</div>
+  </section><section className="ds-preview">
+    <div className="ds-previewhead"><div><h2>{isThemeStudio?'Theme preview':'Design preview & versions'}</h2><small>{showAiPreview?'Canva AI design — view or edit in Canva':selectedNative?'Saved Native snapshot':'Live editable Native design'}</small></div><div className="ds-actions"><button className="ds-btn secondary" onClick={()=>setPreviewKey('live')}>Live edit</button><button className="ds-btn secondary" disabled={busy} onClick={exportImage}><Download size={15}/> Export current Native PNG</button></div></div>
+    <div className="ds-stage">{showAiPreview?(selectedAI?.preview?<img className="ds-ai-preview" src={selectedAI.preview} alt="Canva AI design"/>:<div className="ds-ai-empty">Canva created a design but no preview is available. <a href={selectedAI?.editUrl} target="_blank" rel="noreferrer">Open in Canva</a></div>):isThemeStudio&&source==='ai'&&currentAI?.preview?<img className="ds-ai-preview" src={currentAI.preview} alt="Canva theme concept"/>:<SlideArtwork design={previewDesign}/>}</div>
+    <div className="ds-version-panel"><div className="ds-version-heading"><h3>Versions</h3><small>Switch versions without losing your Native working copy</small></div><div className="ds-version-list"><button className={previewKey==='live'?'ds-version-active':''} onClick={()=>setPreviewKey('live')}>Live Native</button>{nativeVersions.map(v=><button key={v.id} className={previewKey==='native:'+v.id?'ds-version-active':''} onClick={()=>setPreviewKey('native:'+v.id)}>Native · {new Date(v.created).toLocaleTimeString()}</button>)}{aiVersions.map(v=><button key={v.id} className={previewKey==='ai:'+v.id?'ds-version-active':''} onClick={()=>setPreviewKey('ai:'+v.id)}>AI · {new Date(v.created).toLocaleTimeString()}</button>)}</div>
+      {selectedNative&&<button className="ds-btn secondary" onClick={()=>{setDesign(structuredClone(selectedNative.design));setTab(selectedNative.design.output);setPreviewKey('live');setMessage('Native version restored to the editor.');}}>Restore this Native version</button>}
+      {selectedAI&&<a className="ds-btn primary" href={selectedAI.editUrl} target="_blank" rel="noreferrer"><ExternalLink size={15}/> Edit in Canva</a>}
+      {selectedAI&&<button className="ds-btn secondary" disabled={busy} onClick={()=>{void saveAITheme(selectedAI);}}><Save size={14}/> Save AI artwork as local theme</button>}
+    </div>
+    <p className="ds-muted">Native layouts preserve editable text. Canva AI generations are returned as presentation designs; their output may vary and is edited in Canva. PNG export and Save Native to Canva use the current Native working design.</p>
+    <h3>Saved designs</h3>{saved.length?<div className="ds-saved">{saved.map(d=><div key={d.id} className="ds-saveditem"><button onClick={()=>{useSaved(d);setPreviewKey('live');}}><SlideArtwork mini design={d}/><span>{d.name}<small>{d.output} · {new Date(d.updated).toLocaleDateString()}</small></span></button><button aria-label="Delete saved design" title="Delete" onClick={async()=>{await deleteDesign(d.id);setSaved(await getDesigns())}}><Trash2 size={16}/></button></div>)}</div>:<p className="ds-muted">No saved designs yet. Use Save locally to keep an editable Native design on this device.</p>}
+    <div className="ds-footerinfo"><Check size={14}/> Local-first: Native designs do not require Canva or Cloudflare storage.</div>
   </section></div>
  </div>
 }
