@@ -15,3 +15,17 @@
 
 /* v30: let portrait previews take natural height and keep the preview frame scrollable */
 .ds-stage{align-items:center;min-width:0}.ds-art.portrait{width:min(100%,510px);height:auto;aspect-ratio:4/5}.ds-art.square{height:auto;aspect-ratio:1/1}.ds-ai-preview{aspect-ratio:auto;max-height:650px;object-fit:contain}
+/* v33: theme inspector and true-size preview for fitted AI copies */
+.ds-theme-preview-button{margin-top:10px;width:100%}
+.ds-theme-preview-panel{margin-top:10px;padding:12px;border:1px solid #e4dff3;border-radius:10px;background:#faf9fe;display:flex;flex-direction:column;gap:10px}
+.ds-theme-preview-panel .ds-art{width:100%;box-shadow:none}
+.ds-theme-preview-panel .ds-art.ds-mini .ds-title{font-size:clamp(12px,1.6vw,22px)}
+.ds-theme-preview-panel img{width:100%;height:auto;border-radius:8px;object-fit:contain}
+.ds-theme-preview-panel small{font-size:11px;color:#717b91;line-height:1.5}
+.ds-ai-format{width:100%;max-width:930px;display:flex;justify-content:center;align-items:center;border-radius:8px;overflow:hidden;min-height:0}
+.ds-ai-format.landscape{aspect-ratio:16/9}
+.ds-ai-format.portrait{aspect-ratio:4/5;max-width:510px}
+.ds-ai-format.square{aspect-ratio:1/1;max-width:590px}
+.ds-ai-format img.ds-ai-preview{width:100%;height:auto;max-height:100%;aspect-ratio:16/9;object-fit:contain;border-radius:0}
+.ds-format-actions{border:1px solid #e3e4ef;background:#fafaff;padding:12px;border-radius:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}
+.ds-format-actions small{color:#6a7690;line-height:1.4;flex:1 1 230px}
